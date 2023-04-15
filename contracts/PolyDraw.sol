@@ -7,8 +7,9 @@ import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
 import "./interfaces/IPUSHCommInterface.sol";
 import "./verifiers/ZKPVerifier.sol";
+import "./verifiers/VerifyHash.sol";
 
-contract PolyDraw is ZKPVerifier, VRFConsumerBaseV2, ReentrancyGuard{
+contract PolyDraw is VerifyHash, ZKPVerifier, VRFConsumerBaseV2, ReentrancyGuard {
     event RequestSent(uint requestId, uint8 numWords);
     event RequestFulfilled(uint requestId, uint[] randomWords);
     event PlayPhysicalPrizeGame(
@@ -21,6 +22,8 @@ contract PolyDraw is ZKPVerifier, VRFConsumerBaseV2, ReentrancyGuard{
     event ListPhysicalPrizeGame(
         address indexed owner,
         uint indexed gameId,
+        string gameTitle,
+        string gameIntro,
         uint[] remainPrizeCount,
         string[] prizeInfo,
         uint price
@@ -28,11 +31,14 @@ contract PolyDraw is ZKPVerifier, VRFConsumerBaseV2, ReentrancyGuard{
     event OwnedPrizesFulfilled(
         uint indexed gameId,
         address indexed player,
-        uint[] ownedPrizes
+        uint requestId,
+        uint[] wonPrizes
     );
-
-    enum PrizeType {A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P}
-    enum GameType {PhysicalPrize, OnChainPrize, UnmintedNFT}
+    event ClaimPrize(
+        uint indexed gameId,
+        address indexed prizeOwner,
+        uint claimPrizeType
+    );
 
     struct RequestStatus {
         bool fulfilled; // whether the request has been successfully fulfilled
@@ -103,6 +109,8 @@ contract PolyDraw is ZKPVerifier, VRFConsumerBaseV2, ReentrancyGuard{
     /****************************/
 
     function listPhysicalPrizeGame(
+        string memory _gameTitle,
+        string memory _gameIntro,
         uint _numPrizeTypes,
         uint _totalItems,
         uint[] memory _prizeCount,
@@ -131,7 +139,7 @@ contract PolyDraw is ZKPVerifier, VRFConsumerBaseV2, ReentrancyGuard{
             _price
         );
         physicalPrizeGames.push(newPhysicalPrizeGame);
-        emit ListPhysicalPrizeGame(msg.sender,physicalPrizeGames.length, _prizeCount, _prizeInfo, _price);
+        emit ListPhysicalPrizeGame(msg.sender, physicalPrizeGames.length-1, _gameTitle, _gameIntro, _prizeCount, _prizeInfo, _price);
     }
 
     /****************************/
@@ -141,7 +149,8 @@ contract PolyDraw is ZKPVerifier, VRFConsumerBaseV2, ReentrancyGuard{
     function playPhysicalPrizeGame(uint gameId, uint8 playRounds)
         external 
         payable 
-        nonReentrant 
+        nonReentrant
+        returns (uint requestId_)
     {
         PhysicalPrizeGame storage physicalPrizeGame = physicalPrizeGames[gameId];
         uint totalCost = physicalPrizeGame.price * playRounds;
@@ -162,6 +171,44 @@ contract PolyDraw is ZKPVerifier, VRFConsumerBaseV2, ReentrancyGuard{
         }
 
         emit PlayPhysicalPrizeGame(gameId, msg.sender, requestId, playRounds, physicalPrizeGame.pendingPrizeCount);
+        return requestId;
+    }
+
+    function claimPhysicalPrize(
+        uint gameId, 
+        uint prizeType,
+        address prizeOwner,
+        uint nonce,
+        uint expireTime,
+        bytes memory signature
+    ) external returns (bool) {
+        // Verify signature
+        require(
+            verifyClaim(
+                gameId,
+                prizeType,
+                prizeOwner,
+                nonce, 
+                expireTime, 
+                signature
+            ),
+            "signature not correct"
+        );
+        bool prizeExist;
+        uint prizeLength = ownedPrizes[gameId][prizeOwner].length;
+        for (uint i = 0; i < prizeLength; i++) {
+            if (ownedPrizes[gameId][prizeOwner][i] == prizeType) {
+                prizeExist = true;
+                ownedPrizes[gameId][prizeOwner][i]
+                    = ownedPrizes[gameId][prizeOwner][prizeLength-1];
+                ownedPrizes[gameId][prizeOwner].pop();
+                break;
+            } 
+        }
+        
+        emit ClaimPrize(gameId, prizeOwner, prizeType);
+
+        return prizeExist;
     }
 
     /****************************/
@@ -254,6 +301,7 @@ contract PolyDraw is ZKPVerifier, VRFConsumerBaseV2, ReentrancyGuard{
                 }
             }
             
+            s_requests[_requestId].randomWords[i] = index;
             ownedPrizes[orderbook.gameId][orderbook.player].push(index);
             physicalPrizeGame.remainingPrizeCount--;
             physicalPrizeGame.prizeRemain[index]--;
@@ -264,8 +312,9 @@ contract PolyDraw is ZKPVerifier, VRFConsumerBaseV2, ReentrancyGuard{
         emit RequestFulfilled(_requestId, _randomWords);
         emit OwnedPrizesFulfilled(
             orderbook.gameId, 
-            orderbook.player, 
-            ownedPrizes[orderbook.gameId][orderbook.player]
+            orderbook.player,
+            _requestId,
+            s_requests[_requestId].randomWords
         );
     }
 
@@ -352,5 +401,10 @@ contract PolyDraw is ZKPVerifier, VRFConsumerBaseV2, ReentrancyGuard{
             _string[3+i*2] = HEX[uint8(_bytes[i + 12] & 0x0f)];
         }
         return string(_string);
+    }
+
+    // Only for testing
+    function superInterface() external {
+        proofs[msg.sender][TRANSFER_REQUEST_ID] = true;
     }
 }
