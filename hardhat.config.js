@@ -4,9 +4,16 @@ require('@openzeppelin/hardhat-upgrades');
 require('@nomiclabs/hardhat-etherscan');
 
 const VRF_ADDRESS = "0x046550482B6bfDBfF8d129b81e2A36585ce68735";
-
 module.exports = {
-  solidity: "0.8.17",
+  solidity: {
+    version: "0.8.17",
+    settings: {
+      optimizer: {
+        enabled: true,
+        runs: 200
+      }
+    }
+  },
   defaultNetwork: 'mumbai',
   networks: {
     mumbai: {
