@@ -6,8 +6,8 @@
     - [0x046550482B6bfDBfF8d129b81e2A36585ce68735](https://mumbai.polygonscan.com/address/0x046550482B6bfDBfF8d129b81e2A36585ce68735)
     - subscribe: 4203
     - owner: 0xF16Aa7E201651e7eAd5fDd010a5a14589E220826 (最後需改為一番賞合約)
-  - IchibanDAO: 一番賞合約
-    - [0xD4859e124557689d2cca2A060D43Edc305DFCbBe](https://mumbai.polygonscan.com/address/0xD4859e124557689d2cca2A060D43Edc305DFCbBe)
+  - PolyDraw: 一番賞合約
+    - [0xEA50E20C35D9DbB776610635a1cdCF7DeCFA13b1](https://mumbai.polygonscan.com/address/0xEA50E20C35D9DbB776610635a1cdCF7DeCFA13b1)
     - subscribe: 4203
 
 ## Polygon ID Wallet setup
@@ -21,12 +21,12 @@
 ## Deploy smart contract
 
 1. Deploy and verify
-  `npx hardhat run scripts/IchibanDAO/deploy.js`
+  `npx hardhat run scripts/PolyDraw/deploy.js`
 
 2. update contract address in set-request.js
 
 3. send zk-request
-   `npx hardhat run scripts/IchibanDAO/set-request.js`
+   `npx hardhat run scripts/PolyDraw/set-request.js`
 
 4. Add contract address to VRF consumer
 

@@ -27,16 +27,16 @@ async function main() {
     };
 
   // add the address of the contract just deployed
-  const ERC20VerifierAddress = "0xD4859e124557689d2cca2A060D43Edc305DFCbBe"
+  const ERC20VerifierAddress = "0xEA50E20C35D9DbB776610635a1cdCF7DeCFA13b1"
 
-  let IchibanDAO = await hre.ethers.getContractAt("IchibanDAO", ERC20VerifierAddress)
+  let PolyDraw = await hre.ethers.getContractAt("PolyDraw", ERC20VerifierAddress)
 
 
   const validatorAddress = "0xF2D4Eeb4d455fb673104902282Ce68B9ce4Ac450"; // sig validator
   // const validatorAddress = "0x3DcAe4c8d94359D31e4C89D7F2b944859408C618"; // mtp validator
 
   try {
-    await IchibanDAO.setZKPRequest(
+    await PolyDraw.setZKPRequest(
         requestId,
         validatorAddress,
         query.schema,
